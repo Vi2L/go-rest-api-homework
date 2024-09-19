@@ -76,6 +76,11 @@ func postTasks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if _, exists := tasks[task.ID]; exists {
+		http.Error(w, "Задача с таким ID уже существует", http.StatusBadRequest)
+		return
+	}
+
 	tasks[task.ID] = task
 
 	w.Header().Set("Content-Type", "application/json")
@@ -87,13 +92,13 @@ func getTask(w http.ResponseWriter, r *http.Request) {
 
 	task, ok := tasks[id]
 	if !ok {
-		http.Error(w, "Задача не найдена", http.StatusNoContent)
+		http.Error(w, "Задача не найдена", http.StatusBadRequest)
 		return
 	}
 
 	resp, err := json.Marshal(task)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -104,7 +109,7 @@ func getTask(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func delTask(w http.ResponseWriter, r *http.Request) {
+func deleteTask(w http.ResponseWriter, r *http.Request) {
 	// Получаем ID задачи из URL
 	id := chi.URLParam(r, "id")
 
@@ -116,7 +121,7 @@ func delTask(w http.ResponseWriter, r *http.Request) {
 
 	// Удаляем задачу из мапы
 	delete(tasks, id)
-
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
 }
@@ -127,7 +132,7 @@ func main() {
 	r.Get("/tasks", getTasks)
 	r.Post("/tasks", postTasks)
 	r.Get("/tasks/{id}", getTask)
-	r.Delete("/tasks/{id}", delTask)
+	r.Delete("/tasks/{id}", deleteTask)
 
 	if err := http.ListenAndServe(":8080", r); err != nil {
 		fmt.Printf("Ошибка при запуске сервера: %s", err.Error())
